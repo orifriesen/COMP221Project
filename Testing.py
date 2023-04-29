@@ -3,8 +3,8 @@ import pygame
 pygame.init()
 
 # Screen details (DON'T MAKE LESS THAN ~500, DID NOT MAKE WITH RESIZABILITY IN MIND!)
-screen_width = 750
-screen_height = 750
+screen_width = 540
+screen_height = 540
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Sudoku Solver")  # Tentative name...
 font = pygame.font.SysFont('Comic Sans', 30)  # Comic sans cause why not
@@ -49,6 +49,50 @@ def draw_grid():
                 screen.blit(number_text, number_rect)
 
 
+def checkRowAndCol(inputGrid, row, col, num):
+    for i in range(9):
+        if inputGrid[row][i] == num or inputGrid[i][col] == num:
+            return False
+    return True
+
+
+def checkSquare(inputGrid, row, col, num):
+    startRow = row - (row % 3)
+    startCol = col - (col % 3)
+    for i in range(3):
+        for j in range(3):
+            if inputGrid[startRow + i][startCol + j] == num:
+                return False
+    return True
+
+
+def isLegal(inputGrid, row, col, num):
+    if checkRowAndCol(inputGrid, row, col, num) and checkSquare(inputGrid, row, col, num):
+        return True
+    else:
+        return False
+
+
+def solvePuzzle(inputGrid, row, col):
+    if row == 8 and col == 9:
+        return True
+
+    if col == 9:
+        row += 1
+        col = 0
+
+    if inputGrid[row][col] > 0:
+        return solvePuzzle(inputGrid, row, col + 1)
+    for num in range(1, 10):
+        if isLegal(inputGrid, row, col, num) == True:
+            inputGrid[row][col] = num
+            if solvePuzzle(inputGrid, row, col + 1):
+                return True
+    inputGrid[row][col] = 0
+    return False
+
+
+
 # Highlight the selected cell
 def highlight_cell(rows, cols):
     rect = pygame.Rect(cell_positions[rows][cols], (cell_size, cell_size))
@@ -64,31 +108,32 @@ def change_number(rows, cols, number):
     number_rect = number_text.get_rect(center=rect.center)
     screen.blit(number_text, number_rect)
 
-
-# The actual "game" loop
 running = True
-selected_cell = None
+
 while running:
     for event in pygame.event.get():
-        # Quit evebt
         if event.type == pygame.QUIT:
             running = False
-        # Handles the clicking of cells + highlighting
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = event.pos
-            row = y // cell_size
-            col = x // cell_size
-            if selected_cell is not None:
-                highlight_cell(*selected_cell)
-            selected_cell = (row, col)
-            highlight_cell(row, col)
-        # Handles inputting of numbers into the grid, ONLY POSITIVE NONZERO INTEGERS!!!
+            mouse_position = pygame.mouse.get_pos()
+            for rows in range(9):
+                for cols in range(9):
+                    rect = pygame.Rect(cell_positions[rows][cols], (cell_size, cell_size))
+                    if rect.collidepoint(mouse_position):
+                        selected_cell = (rows, cols)
+                        highlight_cell(rows, cols)
         elif event.type == pygame.KEYDOWN:
-            if selected_cell is not None and pygame.K_1 <= event.key <= pygame.K_9:
-                change_number(selected_cell[0], selected_cell[1], event.key - pygame.K_0)
+            if event.unicode.isdigit() and selected_cell is not None:
+                change_number(selected_cell[0], selected_cell[1], int(event.unicode))
+            elif event.key == pygame.K_BACKSPACE and selected_cell is not None:
+                change_number(selected_cell[0], selected_cell[1], 0)
+            elif event.key == pygame.K_s:
+                # Call the solver algorithm here
+                print("fuck")
+                solvePuzzle(grid, 0, 0)
+                screen.fill((100,100,255))
+                pygame.display.update()
 
-    # Draw + Update
     draw_grid()
     pygame.display.update()
 
-pygame.quit()
